@@ -1,234 +1,849 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ultimate Wheel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin The Wheel - Raffle & Giveaway Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<style>
-body{
-  margin:0;
-  background:black;
-  color:white;
-  text-align:center;
-  font-family:Arial;
-}
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+        }
 
-h1{
-  color:cyan;
-  text-shadow:0 0 20px cyan;
-}
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
 
-canvas{
-  border-radius:50%;
-  background:#111;
-  box-shadow:0 0 50px cyan;
-}
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
 
-.pointer{
-  font-size:35px;
-  color:red;
-  text-shadow:0 0 10px red;
-}
+        .logo {
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+        }
 
-input{
-  padding:8px;
-  margin:5px;
-  border:none;
-  border-radius:6px;
-}
+        nav a {
+            color: #666;
+            text-decoration: none;
+            margin: 0 20px;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
 
-button{
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
+        nav a:hover {
+            color: #667eea;
+        }
 
-button:active{
-  transform:scale(0.95);
-}
+        /* Main Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: calc(100vh - 80px);
+        }
 
-.spin{background:lime;}
-.add{background:dodgerblue;color:white;}
-.reset{background:red;color:white;}
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
 
-#winnerBox{
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%) scale(0);
-  font-size:40px;
-  color:gold;
-  text-shadow:0 0 30px gold;
-  transition:0.4s;
-}
+        .page.active {
+            display: block;
+        }
 
-.show{
-  transform:translate(-50%,-50%) scale(1.2);
-}
-</style>
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== WHEEL PAGE ===== */
+        .wheel-page {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: start;
+        }
+
+        .wheel-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .wheel-display {
+            position: relative;
+            width: 420px;
+            height: 420px;
+            margin-bottom: 30px;
+            perspective: 1200px;
+        }
+
+        .wheel-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotateX(8deg);
+            filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.25));
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid #ff6b6b;
+            z-index: 50;
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.3));
+        }
+
+        .center-cap {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle at 35% 35%, #fff 0%, #f5f5f5 40%, #999 100%);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 0 3px #ff6b6b,
+                inset 0 5px 10px rgba(255, 255, 255, 0.9),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.4),
+                0 15px 30px rgba(0, 0, 0, 0.3);
+            z-index: 60;
+        }
+
+        .center-cap::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 25px;
+            height: 25px;
+            background: radial-gradient(circle at 40% 40%, #fff 0%, #ddd 100%);
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .spin-button {
+            padding: 18px 70px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin: 20px 0;
+        }
+
+        .spin-button:hover:not(:disabled) {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.6);
+        }
+
+        .spin-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            width: 100%;
+            padding: 25px;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            border-radius: 15px;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            border: 3px solid #ddd;
+            text-align: center;
+            gap: 10px;
+        }
+
+        /* Config Section */
+        .config-section {
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        .config-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .config-section::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .config-section::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #333;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .prize-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .prize-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 60px auto;
+            gap: 12px;
+            align-items: center;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 2px solid #e5e5e5;
+            transition: all 0.3s;
+        }
+
+        .prize-row:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .prize-row input[type="text"] {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .prize-row input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .prize-row input[type="number"] {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .prize-row input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .color-picker {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .color-picker:hover {
+            border-color: #667eea;
+            box-shadow: 0 0 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .delete-btn {
+            padding: 8px 12px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #ee5a52;
+            transform: scale(1.05);
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-add {
+            padding: 12px;
+            background: linear-gradient(135deg, #4ECDC4 0%, #45b8b0 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(78, 205, 196, 0.4);
+        }
+
+        .btn-update {
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+            grid-column: 1 / -1;
+        }
+
+        .btn-update:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        /* ===== HOME PAGE ===== */
+        .home-page {
+            background: white;
+            padding: 60px 40px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .home-page h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .home-page p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .home-btn {
+            padding: 16px 50px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .home-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .feature-card {
+            padding: 30px;
+            background: #f9f9f9;
+            border-radius: 15px;
+            border: 2px solid #e5e5e5;
+        }
+
+        .feature-card h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: #999;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .wheel-page {
+                grid-template-columns: 1fr;
+            }
+
+            .wheel-display {
+                width: 360px;
+                height: 360px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px 20px;
+            }
+
+            .logo {
+                font-size: 24px;
+            }
+
+            nav a {
+                margin: 5px 0;
+            }
+
+            .container {
+                padding: 20px 10px;
+            }
+
+            .wheel-section,
+            .config-section {
+                padding: 20px;
+            }
+
+            .wheel-display {
+                width: 300px;
+                height: 300px;
+            }
+
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-update {
+                grid-column: 1;
+            }
+
+            .home-page h2 {
+                font-size: 32px;
+            }
+
+            .home-page p {
+                font-size: 16px;
+            }
+
+            .prize-row {
+                grid-template-columns: 1fr;
+            }
+
+            .prize-row input,
+            .prize-row .color-picker,
+            .prize-row .delete-btn {
+                grid-column: 1 !important;
+            }
+        }
+    </style>
 </head>
-
 <body>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">🎡 SPIN WHEEL</div>
+        <div>
+            <a href="#" onclick="showPage('home')">Home</a>
+            <a href="#" onclick="showPage('wheel')">Spin Wheel</a>
+        </div>
+    </nav>
 
-<h1>🎡 Ultimate Wheel</h1>
-<div class="pointer">⬇️</div>
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Home Page -->
+        <div id="home" class="page active home-page">
+            <h2>Welcome to Spin The Wheel</h2>
+            <p>Create custom weighted raffle wheels for giveaways, contests, and fun raffles!</p>
+            
+            <button class="home-btn" onclick="showPage('wheel')">Start Spinning 🎯</button>
 
-<canvas id="wheel" width="320" height="320"></canvas>
+            <div class="features">
+                <div class="feature-card">
+                    <h3>⚙️ Custom Prizes</h3>
+                    <p>Add unlimited prizes with custom names and weights</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎨 Custom Colors</h3>
+                    <p>Pick any color for each prize segment</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Weighted System</h3>
+                    <p>Set probability for each prize using weights</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎡 Smooth Animation</h3>
+                    <p>Beautiful 3D spinning animation</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📱 Responsive Design</h3>
+                    <p>Works perfectly on all devices</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚡ Fast & Easy</h3>
+                    <p>No setup required, just add prizes and spin!</p>
+                </div>
+            </div>
+        </div>
 
-<div>
-<input id="name" placeholder="Name">
-<input id="weight" placeholder="Number">
-<button class="add" onclick="addEntry()">Add</button>
-<button class="reset" onclick="reset()">Reset</button>
-</div>
+        <!-- Wheel Page -->
+        <div id="wheel" class="page wheel-page">
+            <!-- Wheel Section -->
+            <div class="wheel-section">
+                <div class="wheel-display">
+                    <div class="pointer"></div>
+                    <div class="wheel-inner">
+                        <canvas id="wheelCanvas" width="400" height="400"></canvas>
+                    </div>
+                    <div class="center-cap"></div>
+                </div>
 
-<button class="spin" onclick="spin()">SPIN</button>
+                <button class="spin-button" id="spinBtn" onclick="spinWheel()">🎡 SPIN NOW</button>
 
-<div id="winnerBox"></div>
+                <div class="result-box" id="resultBox">
+                    Ready to spin!
+                </div>
+            </div>
 
-<audio id="tick" src="https://www.soundjay.com/mechanical/sounds/tick-01.mp3"></audio>
+            <!-- Config Section -->
+            <div class="config-section">
+                <div class="section-title">⚙️ Configure Prizes</div>
 
-<script>
-let entries=[];
-let angle=0;
-let velocity=0;
-let spinning=false;
-let lastSlice=-1;
+                <div class="prize-list" id="prizeList"></div>
 
-const canvas=document.getElementById("wheel");
-const ctx=canvas.getContext("2d");
+                <div class="action-buttons">
+                    <button class="btn-add" onclick="addPrize()">➕ Add Prize</button>
+                    <button class="btn-update" onclick="updateWheel()">🔄 Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-function drawWheel(){
- if(entries.length===0)return;
+    <script>
+        // Prize Configuration
+        let wheelConfig = [
+            { name: "iPhone 15", weight: 5, color: "#FF6B6B" },
+            { name: "$500 Gift Card", weight: 10, color: "#4ECDC4" },
+            { name: "Laptop", weight: 3, color: "#FFE66D" },
+            { name: "$100 Cash", weight: 20, color: "#95E1D3" },
+            { name: "Headphones", weight: 15, color: "#A8E6CF" },
+            { name: "Better Luck", weight: 47, color: "#FF8B94" }
+        ];
 
- let total=entries.reduce((s,e)=>s+e.weight,0);
- let start=angle;
+        let isSpinning = false;
+        let currentRotation = 0;
+        const colors = ["#FF6B6B", "#4ECDC4", "#FFE66D", "#95E1D3", "#A8E6CF", "#FF8B94", "#C7CEEA", "#FFB7B2", "#FFDAC1", "#E2F0CB"];
 
- entries.forEach((e,i)=>{
-  let slice=(e.weight/total)*2*Math.PI;
+        // Page Navigation
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageName).classList.add('active');
+            if (pageName === 'wheel') {
+                setTimeout(() => drawWheel(), 100);
+            }
+        }
 
-  ctx.beginPath();
-  ctx.fillStyle=`hsl(${i*60},80%,50%)`;
-  ctx.moveTo(160,160);
-  ctx.arc(160,160,160,start,start+slice);
-  ctx.fill();
+        // Render Prize Inputs
+        function renderPrizeInputs() {
+            const prizeList = document.getElementById('prizeList');
+            prizeList.innerHTML = '';
 
-  if(slice>0.3){
-    ctx.save();
-    ctx.translate(160,160);
-    ctx.rotate(start+slice/2);
+            wheelConfig.forEach((prize, index) => {
+                const row = document.createElement('div');
+                row.className = 'prize-row';
+                row.innerHTML = `
+                    <input 
+                        type="text" 
+                        placeholder="Enter prize name" 
+                        value="${prize.name}"
+                        onchange="wheelConfig[${index}].name = this.value"
+                    >
+                    <input 
+                        type="number" 
+                        placeholder="Weight" 
+                        value="${prize.weight}"
+                        min="1"
+                        onchange="wheelConfig[${index}].weight = parseInt(this.value) || 1"
+                    >
+                    <input 
+                        type="color" 
+                        class="color-picker"
+                        value="${prize.color}"
+                        onchange="wheelConfig[${index}].color = this.value"
+                    >
+                    <button class="delete-btn" onclick="deletePrize(${index})">Delete</button>
+                `;
+                prizeList.appendChild(row);
+            });
+        }
 
-    ctx.fillStyle="white";
-    ctx.font="bold 12px Arial";
-    ctx.fillText(e.name,80,-5);
+        // Add Prize
+        function addPrize() {
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            wheelConfig.push({
+                name: "New Prize",
+                weight: 10,
+                color: randomColor
+            });
+            renderPrizeInputs();
+        }
 
-    ctx.fillStyle="yellow";
-    ctx.font="10px Arial";
-    ctx.fillText(e.weight,80,12);
+        // Delete Prize
+        function deletePrize(index) {
+            if (wheelConfig.length <= 1) {
+                alert("You must have at least one prize!");
+                return;
+            }
+            wheelConfig.splice(index, 1);
+            renderPrizeInputs();
+            updateWheel();
+        }
 
-    ctx.restore();
-  }
+        // Update Wheel
+        function updateWheel() {
+            drawWheel();
+            document.getElementById('resultBox').textContent = 'Ready to spin!';
+        }
 
-  start+=slice;
- });
-}
+        // Get Segments
+        function getSegments() {
+            const totalWeight = wheelConfig.reduce((sum, p) => sum + p.weight, 0);
+            return wheelConfig.map(prize => ({
+                ...prize,
+                angle: (prize.weight / totalWeight) * 2 * Math.PI
+            }));
+        }
 
-function getWinner(){
- let total=entries.reduce((s,e)=>s+e.weight,0);
+        // Color Helpers
+        function lightenColor(hex, percent) {
+            const num = parseInt(hex.replace("#", ""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, (num >> 16) + amt);
+            const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+            const B = Math.min(255, (num & 0x0000FF) + amt);
+            return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+        }
 
- let pointer=(Math.PI*1.5 - angle)%(2*Math.PI);
- if(pointer<0) pointer+=2*Math.PI;
+        function darkenColor(hex, percent) {
+            const num = parseInt(hex.replace("#", ""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.max(0, (num >> 16) - amt);
+            const G = Math.max(0, (num >> 8 & 0x00FF) - amt);
+            const B = Math.max(0, (num & 0x0000FF) - amt);
+            return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+        }
 
- let current=0;
+        // Draw Wheel
+        function drawWheel() {
+            const canvas = document.getElementById('wheelCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 180;
 
- for(let e of entries){
-  let slice=(e.weight/total)*2*Math.PI;
-  current+=slice;
-  if(pointer<=current){
-    return e;
-  }
- }
-}
+            const segments = getSegments();
+            let currentAngle = 0;
 
-function updateTick(){
- let currentSlice=Math.floor((angle%(2*Math.PI))*10);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(currentRotation);
 
- if(currentSlice!==lastSlice){
-  lastSlice=currentSlice;
-  let t=document.getElementById("tick");
-  t.currentTime=0;
-  t.play();
- }
-}
+            // Shadow
+            const shadowGrad = ctx.createRadialGradient(0, 0, radius - 30, 0, 0, radius + 10);
+            shadowGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            shadowGrad.addColorStop(0.8, 'rgba(0,0,0,0.15)');
+            shadowGrad.addColorStop(1, 'rgba(0,0,0,0.35)');
+            ctx.fillStyle = shadowGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius + 10, 0, 2 * Math.PI);
+            ctx.fill();
 
-function spin(){
- if(spinning || entries.length===0)return;
- spinning=true;
+            // Draw segments
+            segments.forEach((segment) => {
+                const startAngle = currentAngle;
+                const endAngle = currentAngle + segment.angle;
+                const midAngle = startAngle + segment.angle / 2;
 
- velocity=Math.random()*0.4+0.35;
+                const grad = ctx.createLinearGradient(
+                    Math.cos(midAngle) * radius * 0.3,
+                    Math.sin(midAngle) * radius * 0.3,
+                    Math.cos(midAngle) * radius,
+                    Math.sin(midAngle) * radius
+                );
 
- function animate(){
-  velocity*=0.982;
+                grad.addColorStop(0, lightenColor(segment.color, 25));
+                grad.addColorStop(0.5, segment.color);
+                grad.addColorStop(1, darkenColor(segment.color, 35));
 
-  if(velocity<0.08){
-    velocity*=0.96;
-  }
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, startAngle, endAngle);
+                ctx.lineTo(0, 0);
+                ctx.fillStyle = grad;
+                ctx.fill();
 
-  angle+=velocity;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
 
-  updateTick();
+                // Text
+                ctx.save();
+                ctx.rotate(midAngle);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                ctx.shadowBlur = 5;
+                ctx.fillText(`${segment.name} (${segment.weight})`, radius - 30, 4);
+                ctx.restore();
 
-  ctx.clearRect(0,0,320,320);
-  drawWheel();
+                currentAngle = endAngle;
+            });
 
-  if(velocity>0.002){
-    requestAnimationFrame(animate);
-  }else{
-    finalStop();
-  }
- }
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
 
- animate();
-}
+            ctx.restore();
+        }
 
-function finalStop(){
- angle+=0.02;
+        // Spin
+        function spinWheel() {
+            if (isSpinning) return;
+            isSpinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('resultBox').textContent = '🎡 Spinning...';
 
- setTimeout(()=>{
-  let win=getWinner();
-  showWinner(win);
-  spinning=false;
- },200);
-}
+            const spinDuration = 5;
+            const rotations = Math.random() * 10 + 8;
+            const finalRotation = rotations * 2 * Math.PI;
+            const startTime = Date.now();
+            const startRotation = currentRotation;
 
-function showWinner(win){
- let box=document.getElementById("winnerBox");
- box.innerText=win.name+" ("+win.weight+")";
- box.classList.add("show");
+            function animate() {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const progress = Math.min(elapsed / spinDuration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                currentRotation = startRotation + finalRotation * easeProgress;
 
- setTimeout(()=>{
-  box.classList.remove("show");
- },3000);
-}
+                drawWheel();
 
-function addEntry(){
- let n=name.value;
- let w=parseFloat(weight.value);
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    determineWinner();
+                    isSpinning = false;
+                    document.getElementById('spinBtn').disabled = false;
+                }
+            }
 
- if(n && w>0){
-  entries.push({name:n,weight:w});
-  name.value="";
-  weight.value="";
- }
-}
+            animate();
+        }
 
-function reset(){
- entries=[];
- ctx.clearRect(0,0,320,320);
-}
-</script>
+        // Winner
+        function determineWinner() {
+            const normalizedRotation = ((currentRotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            const segments = getSegments();
 
+            let accumulatedAngle = 0;
+            for (let segment of segments) {
+                accumulatedAngle += segment.angle;
+                if (normalizedRotation <= accumulatedAngle) {
+                    document.getElementById('resultBox').innerHTML = `
+                        <span style="font-size: 32px;">🎉</span>
+                        <strong style="color: #ff6b6b; font-size: 22px;">${segment.name}</strong>
+                        <span style="font-size: 14px; color: #666;">Weight: ${segment.weight}</span>
+                    `;
+                    return;
+                }
+            }
+        }
+
+        // Initialize
+        renderPrizeInputs();
+    </script>
 </body>
 </html>
