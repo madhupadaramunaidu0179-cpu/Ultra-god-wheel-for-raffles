@@ -1,290 +1,65 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IMPOSSIBLE WHEEL</title>
+function getWinnerFromPointer() {
+  let total = entries.reduce((s,e)=>s+e.weight,0);
 
-<style>
-body{
-  margin:0;
-  background:#000;
-  color:#fff;
-  text-align:center;
-  font-family:Arial;
-  overflow:hidden;
-}
-h1{
-  color:#00ffff;
-  text-shadow:0 0 25px #00ffff;
-}
-canvas{
-  background:#111;
-  border-radius:50%;
-  box-shadow:0 0 80px cyan;
-  transition:transform .2s;
-}
-.pointer{font-size:40px;color:#ff3b3b;}
-input,button{
-  padding:8px;margin:5px;border:none;border-radius:6px;
-}
-.spin{background:#22c55e;}
-.add{background:#3b82f6;color:#fff;}
-.reset{background:#ef4444;color:#fff;}
+  let pointerAngle = (Math.PI * 1.5 - angle) % (2*Math.PI);
+  if(pointerAngle < 0) pointerAngle += 2*Math.PI;
 
-#winner{
-  position:fixed;top:50%;left:50%;
-  transform:translate(-50%,-50%) scale(0);
-  font-size:56px;color:gold;
-  text-shadow:0 0 40px gold;
-  transition:.35s;
-}
-.show{transform:translate(-50%,-50%) scale(1.2);}
+  let current = 0;
 
-.flash{
-  position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;
-}
-</style>
-</head>
+  for(let e of entries){
+    let slice = (e.weight / total) * 2 * Math.PI;
+    current += slice;
 
-<body>
-
-<h1>⚡ IMPOSSIBLE WHEEL ⚡</h1>
-<div class="pointer">⬇️</div>
-<canvas id="wheel" width="360" height="360"></canvas>
-
-<div>
-  <input id="name" placeholder="Name">
-  <input id="weight" placeholder="Number">
-  <button class="add" onclick="add()">Add</button>
-  <button class="reset" onclick="resetAll()">Reset</button>
-</div>
-
-<button class="spin" onclick="spin()">SPIN</button>
-
-<div id="winner"></div>
-<div id="flash" class="flash"></div>
-
-<script>
-let entries=[];
-let angle=0, spinning=false;
-
-// 🎯 Director Mode (optional, keep empty for fair play)
-let biasName = ""; // e.g., "Rahul" gives slight boost
-
-const c = document.getElementById("wheel");
-const ctx = c.getContext("2d");
-
-function totalWeight(){
-  return entries.reduce((s,e)=>s+e.w,0);
-}
-
-function cumulativeAngles(){
-  const total = totalWeight();
-  let start = angle;
-  return entries.map(e=>{
-    const slice = (e.w/total)*2*Math.PI;
-    const obj = { e, start, end:start+slice, mid:start+slice/2, size:slice };
-    start += slice;
-    return obj;
-  });
-}
-
-function draw(){
-  if(!entries.length) return;
-
-  const total = totalWeight();
-  let start = angle;
-
-  entries.forEach((e,i)=>{
-    const ratio = e.w/total;
-    const slice = ratio*2*Math.PI;
-
-    // neon gradient
-    const g = ctx.createLinearGradient(0,0,360,360);
-    g.addColorStop(0, `hsl(${i*70},100%,55%)`);
-    g.addColorStop(1, "#000");
-
-    ctx.beginPath();
-    ctx.fillStyle = g;
-    ctx.moveTo(180,180);
-    ctx.arc(180,180,180,start,start+slice);
-    ctx.fill();
-
-    const percent = (ratio*100).toFixed(1)+"%";
-
-    if(slice > 0.18){
-      ctx.save();
-      ctx.translate(180,180);
-      ctx.rotate(start + slice/2);
-      ctx.fillStyle="#fff";
-      ctx.fillText(e.n, 95, -8);
-      ctx.fillStyle="#ffd700";
-      ctx.fillText(e.w, 95, 10);
-      ctx.fillStyle="#22d3ee";
-      ctx.fillText(percent, 95, 26);
-      ctx.restore();
-    }
-
-    start += slice;
-  });
-}
-
-// 🎯 pick winner FIRST (weighted + optional bias)
-function pickWinner(){
-  const pool=[];
-  entries.forEach(e=>{
-    let count = Math.max(1, Math.floor(e.w));
-    if(biasName && e.n === biasName) count = Math.floor(count*1.8);
-    for(let i=0;i<count;i++) pool.push(e);
-  });
-  return pool[Math.floor(Math.random()*pool.length)];
-}
-
-// 🎯 compute exact landing angle so pointer (top) hits winner mid
-function computeTargetAngle(win){
-  // we want winner.mid to be at pointer angle = -Math.PI/2 (top)
-  const segments = cumulativeAngles();
-  const seg = segments.find(s=>s.e===win);
-
-  // current mid position is seg.mid; we need rotation delta:
-  const pointerAngle = -Math.PI/2;
-  let delta = pointerAngle - seg.mid;
-
-  // normalize
-  while(delta < 0) delta += 2*Math.PI;
-
-  // add full spins for drama
-  const spins = 6 + Math.random()*3; // 6–9 spins
-  const target = angle + delta + spins*2*Math.PI;
-
-  return target;
-}
-
-function spin(){
-  if(spinning || !entries.length) return;
-  spinning = true;
-
-  const win = pickWinner();                 // choose first
-  const target = computeTargetAngle(win);   // compute exact landing
-
-  let t=0;
-  const duration = 4200 + Math.random()*800;
-
-  let lastTickBucket = -1;
-
-  function easeOutCubic(x){ return 1 - Math.pow(1-x,3); }
-
-  function animate(ts){
-    if(!t) t = ts;
-    const p = Math.min(1, (ts - t)/duration);
-    const eased = easeOutCubic(p);
-
-    const prevAngle = angle;
-    angle = angle + (target - angle) * 0.08 + (target - angle) * 0.92 * eased;
-
-    // 🎥 slow-mo + zoom near end
-    if(p > 0.7){
-      c.style.transform = "scale(1.08)";
-    } else {
-      c.style.transform = "scale(1)";
-    }
-
-    // 🔊 tick when crossing slice boundaries
-    const segs = cumulativeAngles();
-    const pointer = -Math.PI/2;
-    // find which segment pointer is currently in
-    let bucket = -1;
-    segs.forEach((s,idx)=>{
-      // normalize angles
-      let a1 = s.start, a2 = s.end;
-      while(a1 < pointer) { a1 += 2*Math.PI; a2 += 2*Math.PI; }
-      if(pointer >= a1 && pointer < a2) bucket = idx;
-    });
-    if(bucket !== lastTickBucket){
-      lastTickBucket = bucket;
-      if(p > 0.5) new Audio("https://www.soundjay.com/mechanical/sounds/tick-01.mp3").play();
-    }
-
-    ctx.clearRect(0,0,360,360);
-    draw();
-
-    if(p < 1){
-      requestAnimationFrame(animate);
-    }else{
-      // 😈 near-miss illusion: tiny overshoot then snap back
-      angle += 0.03;
-      setTimeout(()=>{
-        angle -= 0.03;
-        finish(win);
-      }, 120);
+    if(pointerAngle <= current){
+      return e;
     }
   }
-
-  requestAnimationFrame(animate);
 }
+      let winner = getWinnerFromPointer();
+      let velocity = Math.random()*0.4 + 0.35;
 
-function finish(win){
-  showWin(win);
-  spinning = false;
-}
+function animate(){
+  velocity *= 0.982; // smoother
 
-function showWin(win){
-  const el = document.getElementById("winner");
-  el.innerText = `${win.n} (${win.w})`;
-  el.classList.add("show");
-
-  // 💥 flash
-  const f = document.getElementById("flash");
-  f.style.opacity = 1;
-  setTimeout(()=>f.style.opacity=0, 120);
-
-  // 💥 shake
-  let i=0;
-  const sh = setInterval(()=>{
-    document.body.style.transform =
-      `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
-    if(i++>18){ clearInterval(sh); document.body.style.transform="translate(0,0)"; }
-  }, 18);
-
-  // 🎉 confetti
-  for(let i=0;i<80;i++){
-    const d=document.createElement("div");
-    d.style.position="fixed";
-    d.style.width="6px"; d.style.height="6px";
-    d.style.left="50%"; d.style.top="50%";
-    d.style.background=`hsl(${Math.random()*360},100%,50%)`;
-    document.body.appendChild(d);
-    const x = Math.random()*420-210;
-    const y = Math.random()*420-210;
-    d.animate([{transform:"translate(0,0)"},{transform:`translate(${x}px,${y}px)`}],
-      {duration:900+Math.random()*400, easing:"ease-out"});
-    setTimeout(()=>d.remove(),1400);
+  if(velocity < 0.08){
+    velocity *= 0.96; // slow cinematic
   }
 
-  setTimeout(()=> el.classList.remove("show"), 3200);
-}
+  angle += velocity;
 
-function add(){
-  const n = document.getElementById("name").value.trim();
-  const w = parseFloat(document.getElementById("weight").value);
-  if(n && w>0){
-    entries.push({n,w});
-    name.value=""; weight.value="";
-    redraw();
+  ctx.clearRect(0,0,350,350);
+  drawWheel();
+
+  if(velocity > 0.002){
+    requestAnimationFrame(animate);
+  } else {
+    finalStop();
   }
 }
+    function finalStop(){
+  // small snap
+  angle += 0.02;
 
-function resetAll(){
-  entries=[];
-  redraw();
+  setTimeout(()=>{
+    let winner = getWinnerFromPointer();
+    showWinner(winner);
+  }, 200);
 }
+    let lastSlice = -1;
 
-function redraw(){
-  ctx.clearRect(0,0,360,360);
-  draw();
+function updateTick(){
+  let currentSlice = Math.floor((angle % (2*Math.PI)) * 10);
+
+  if(currentSlice !== lastSlice){
+    lastSlice = currentSlice;
+    document.getElementById("tick").currentTime = 0;
+    document.getElementById("tick").play();
+  }
 }
+    if(slice > 0.3){
+  ctx.font = "bold 12px Arial";
+  ctx.fillText(e.name, 90, -5);
 
-redraw();
-</script>
-</body>
-</html>
+  ctx.font = "10px Arial";
+  ctx.fillText(e.weight, 90, 12);
+}
